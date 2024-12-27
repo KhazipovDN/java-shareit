@@ -50,9 +50,8 @@ public class UserServiceImpl implements UserService {
             }
         }
         log.error("User with ID {} not found for update", userId);
-        throw new IllegalArgumentException("User not found");
+        throw new ResourceNotFoundException("Пользователь не найден");
     }
-
 
     @Override
     public UserDto getUserById(Long userId) {
@@ -63,7 +62,7 @@ public class UserServiceImpl implements UserService {
                 return UserMapper.toUserDto(user);
             }
         }
-        throw new ResourceNotFoundException("Ошибка", "Пользователь с ID " + userId + " не найден");
+        throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден");
     }
 
     @Override
@@ -96,7 +95,7 @@ public class UserServiceImpl implements UserService {
             log.info("User with ID {} deleted successfully", userId);
         } else {
             log.error("User with ID {} not found for deletion", userId);
-            throw new IllegalArgumentException("User not found");
+            throw new IllegalArgumentException("Пользователь не найден");
         }
     }
 
@@ -104,7 +103,7 @@ public class UserServiceImpl implements UserService {
         for (User user : users) {
             if (user.getEmail().equals(userDto.getEmail())) {
                 log.error("Email {} already exists. Cannot create user.", userDto.getEmail());
-                throw new SameEmailException("Email already exists");
+                throw new SameEmailException("Email уже используется");
             }
         }
     }

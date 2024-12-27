@@ -26,12 +26,11 @@ public class ItemServiceImpl implements ItemService {
     @Autowired
     private final UserService userService;
 
-
     @Override
     public ItemDto createItem(ItemDto itemDto, Long userId) {
         log.info("Запрос на создание предмета пользователем с ID: {}", userId);
         if (userService.getUserById(userId) == null) {
-            throw new ResourceNotFoundException("Ошибка: ","Пользователь с ID " + userId + " не найден.");
+            throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден.");
         }
         validateItemFields(itemDto);
         Item item = ItemMapper.toItem(itemDto, userId);
@@ -52,11 +51,18 @@ public class ItemServiceImpl implements ItemService {
             }
         }
         if (foundItem == null) {
-            throw new ResourceNotFoundException("Ошибка: ","Предмет с ID " + itemId + " не найден.");
+            throw new ResourceNotFoundException("Предмет с ID " + itemId + " не найден.");
         }
         if (!foundItem.getOwner().equals(userId)) {
             throw new ForbiddenOperationException("Пользователь с ID " + userId + " не является владельцем предмета.");
         }
+
+        log.info("Поля ItemDto для обновления: id = {}, name = {}, description = {}, available = {}, requestId = {}",
+                foundItem.getId() != null ? foundItem.getId() : "пустое",
+                foundItem.getName() != null && !foundItem.getName().isBlank() ? foundItem.getName() : "пустое",
+                foundItem.getDescription() != null && !foundItem.getDescription().isBlank() ? foundItem.getDescription() : "пустое",
+                foundItem.getAvailable() != null ? foundItem.getAvailable() : "пустое");
+
         if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
             log.debug("Обновление имени предмета с ID: {} на {}", itemId, itemDto.getName());
             foundItem.setName(itemDto.getName());
@@ -65,9 +71,9 @@ public class ItemServiceImpl implements ItemService {
             log.debug("Обновление описания предмета с ID: {} на {}", itemId, itemDto.getDescription());
             foundItem.setDescription(itemDto.getDescription());
         }
-        if (itemDto.isAvailable() != foundItem.isAvailable()) {
-            log.debug("Обновление доступности предмета с ID: {} на {}", itemId, itemDto.isAvailable());
-            foundItem.setAvailable(itemDto.isAvailable());
+        if (itemDto.getAvailable() != null || !foundItem.getAvailable()) {
+            log.debug("Обновление доступности предмета с ID: {} на {}", itemId, itemDto.getAvailable());
+            foundItem.setAvailable(itemDto.getAvailable());
         }
 
         log.info("Успешно обновлен предмет с ID: {}", itemId);
@@ -83,7 +89,7 @@ public class ItemServiceImpl implements ItemService {
                 return ItemMapper.toItemDto(item);
             }
         }
-        throw new IllegalArgumentException("Item not found");
+        throw new IllegalArgumentException("Предмет не найден");
     }
 
     @Override
@@ -105,14 +111,14 @@ public class ItemServiceImpl implements ItemService {
         List<ItemDto> result = new ArrayList<>();
         if (text == null || text.isBlank()) {
             log.warn("Пустой или отсутствующий текст поиска");
-            return null;
+            return result;
         }
 
         String searchText = text.toLowerCase();
 
         for (Item item : items) {
-            log.debug("Проверяем предмет: id={}, name={}, available={}", item.getId(), item.getName(), item.isAvailable());
-            if (Boolean.TRUE.equals(item.isAvailable()) &&
+            log.debug("Проверяем предмет: id={}, name={}, available={}", item.getId(), item.getName(), item.getAvailable());
+            if (Boolean.TRUE.equals(item.getAvailable()) &&
                     (item.getName().toLowerCase().contains(searchText) ||
                             (item.getDescription() != null && item.getDescription().toLowerCase().contains(searchText)))) {
                 log.debug("Предмет добавлен в результат поиска: id={}, name={}", item.getId(), item.getName());
@@ -127,10 +133,10 @@ public class ItemServiceImpl implements ItemService {
         if (itemDto.getName().isEmpty()) {
             throw new MissingFieldException("Поле 'name' обязательно для заполнения.");
         }
-        if (itemDto.getDescription().isEmpty()) {
+        if (itemDto.getDescription().isEmpty() || itemDto.getDescription() == null) {
             throw new MissingFieldException("Поле 'description' обязательно для заполнения.");
         }
-        if (itemDto.isAvailable() == false) {
+        if (itemDto.getAvailable() == null) {
             throw new MissingFieldException("Поле 'available' должно быть true.");
         }
     }
