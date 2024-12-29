@@ -1,6 +1,7 @@
 package ru.practicum.shareit.user.service;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -9,102 +10,81 @@ import ru.practicum.shareit.exception.SameEmailException;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.UserMapper;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+@RequiredArgsConstructor
 @Getter
 @Service
 public class UserServiceImpl implements UserService {
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
-    private final List<User> users = new ArrayList<>();
-    private Long idCounter = 1L;
+    private final UserStorage userStorage;
+
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        log.info("Creating user with data: {}", userDto);
+        log.info("Создание пользователя: {}", userDto);
         validateUser(userDto);
         User user = UserMapper.toUser(userDto);
-        user.setId(idCounter++);
-        users.add(user);
-        log.debug("User created: {}", user);
-        return UserMapper.toUserDto(user);
+        User createdUser = userStorage.addUser(user);
+        log.debug("Пользователь создан: {}", createdUser);
+        return UserMapper.toUserDto(createdUser);
     }
 
     @Override
     public UserDto updateUser(Long userId, UserDto userDto) {
-        log.info("Updating user with ID: {}", userId);
+        log.info("Обновление пользователя с идентификатором: {}", userId);
         validateUser(userDto);
-        for (User user : users) {
-            if (user.getId().equals(userId)) {
-                if (userDto.getName() != null) {
-                    log.debug("Updating user name from '{}' to '{}'", user.getName(), userDto.getName());
-                    user.setName(userDto.getName());
-                }
-                if (userDto.getEmail() != null) {
-                    log.debug("Updating user email from '{}' to '{}'", user.getEmail(), userDto.getEmail());
-                    user.setEmail(userDto.getEmail());
-                }
-                log.info("User updated: {}", user);
-                return UserMapper.toUserDto(user);
-            }
+        User updatedUser = userStorage.updateUser(userId, UserMapper.toUser(userDto));
+        if (updatedUser == null) {
+            log.error("Пользователь с идентификатором {} не найден для обновления", userId);
+            throw new ResourceNotFoundException("Пользователь не найден");
         }
-        log.error("User with ID {} not found for update", userId);
-        throw new ResourceNotFoundException("Пользователь не найден");
+        log.info("Пользователь обновлен: {}", updatedUser);
+        return UserMapper.toUserDto(updatedUser);
     }
 
     @Override
     public UserDto getUserById(Long userId) {
-        log.info("Fetching user with ID: {}", userId);
-        for (User user : users) {
-            if (user.getId().equals(userId)) {
-                log.debug("User found: {}", user);
-                return UserMapper.toUserDto(user);
-            }
+        log.info("Получение пользователя по идентификатору: {}", userId);
+        User user = userStorage.getUserById(userId);
+        if (user == null) {
+            throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден");
         }
-        throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден");
+        log.debug("Пользователь найден: {}", user);
+        return UserMapper.toUserDto(user);
     }
 
     @Override
     public List<UserDto> getAllUsers() {
-        log.info("Fetching all users");
-
+        log.info("Получение всех пользователей");
         List<UserDto> result = new ArrayList<>();
-        for (User user : users) {
+        Map<Long, User> users = userStorage.getAllUsers();
+        for (User user : users.values()) {
             result.add(UserMapper.toUserDto(user));
         }
-
-        log.debug("Total users fetched: {}", result.size());
+        log.debug("Всего получено пользователей: {}", result.size());
         return result;
     }
 
     @Override
     public void deleteUser(Long userId) {
-        log.info("Deleting user with ID: {}", userId);
-
-        User userToRemove = null;
-        for (User user : users) {
-            if (user.getId().equals(userId)) {
-                userToRemove = user;
-                break;
-            }
+        log.info("Удаление пользователя с идентификатором: {}", userId);
+        boolean deleted = userStorage.deleteUser(userId);
+        if (!deleted) {
+            log.error("Пользователь с идентификатором {} не найден для удаления", userId);
+            throw new ResourceNotFoundException("Пользователь не найден");
         }
-
-        if (userToRemove != null) {
-            users.remove(userToRemove);
-            log.info("User with ID {} deleted successfully", userId);
-        } else {
-            log.error("User with ID {} not found for deletion", userId);
-            throw new IllegalArgumentException("Пользователь не найден");
-        }
+        log.info("Пользователь с идентификатором {} успешно удален", userId);
     }
 
     private void validateUser(UserDto userDto) {
-        for (User user : users) {
-            if (user.getEmail().equals(userDto.getEmail())) {
-                log.error("Email {} already exists. Cannot create user.", userDto.getEmail());
-                throw new SameEmailException("Email уже используется");
-            }
+        if (userStorage.emailExists(userDto.getEmail(), userDto.getId())) {
+            log.error("Адрес электронной почты {} уже существует для другого пользователя", userDto.getEmail());
+            throw new SameEmailException("Email уже используется другим пользователем");
         }
     }
 }
