@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.repositary.BookingRepository;
 import ru.practicum.shareit.booking.storage.BookingMapper;
-import ru.practicum.shareit.exception.ForbiddenOperationException;
 import ru.practicum.shareit.exception.MissingFieldException;
 import ru.practicum.shareit.exception.ResourceNotFoundException;
 import ru.practicum.shareit.item.CommentMapper;
