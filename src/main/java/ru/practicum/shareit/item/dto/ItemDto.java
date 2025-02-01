@@ -1,19 +1,27 @@
 package ru.practicum.shareit.item.dto;
 
-import lombok.*;
-/**
- * TODO Sprint add-controllers.
- */
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Value;
+import ru.practicum.shareit.Create;
+import ru.practicum.shareit.Update;
 
-@Getter
-@Setter
-@AllArgsConstructor
-@Builder
+import java.util.List;
+
+@Value
 public class ItemDto {
-    private Long id;
-    private String name;
-    private String description;
-    private Boolean available;
-    private Long requestId;
+    Long id;
+    @NotBlank(groups = {Create.class})
+    @Size(groups = {Create.class, Update.class}, min = 1)
+    String name;
+    @NotBlank(groups = {Create.class})
+    @Size(groups = {Create.class, Update.class}, min = 1)
+    String description;
+    @NotNull(groups = {Create.class})
+    Boolean available;
+    Long ownerId;
+    BookerInfoDto lastBooking;
+    BookerInfoDto nextBooking;
+    List<CommentDto> comments;
 }
-
