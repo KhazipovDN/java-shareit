@@ -44,7 +44,7 @@ public class ItemServiceImpl implements ItemService {
             log.info("Предмет с ID {} не найден.", itemId);
             throw new ResourceNotFoundException("Предмет с ID " + itemId + " не найден.");
         }
-        if (!foundItem.getOwner().equals(userId)) {
+        if (!foundItem.getOwner().getId().equals(userId)) {
             log.info("Пользователь с ID {} не является владельцем предмета с ID {}", userId, itemId);
             throw new ForbiddenOperationException("Пользователь с ID " + userId + " не является владельцем предмета.");
         }
@@ -87,7 +87,7 @@ public class ItemServiceImpl implements ItemService {
         List<ItemDto> userItems = new ArrayList<>();
         List<Item> allItems = itemStorage.getAllItems();
         for (Item item : allItems) {
-            if (item.getOwner().equals(userId)) {
+            if (item.getOwner().getId().equals(userId)) {
                 userItems.add(ItemMapper.toItemDto(item));
             }
         }
