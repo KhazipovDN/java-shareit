@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.ForbiddenOperationException;
 import ru.practicum.shareit.exception.ResourceNotFoundException;
 import ru.practicum.shareit.exception.SameEmailException;
 import ru.practicum.shareit.user.UserMapper;
@@ -69,7 +70,7 @@ public class UserServiceDB implements UserService {
 
         Optional<User> user = userRepository.findById(userId);
         if (user.isEmpty()) {
-            throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден.");
+            throw new ForbiddenOperationException("Пользователь с ID " + userId + " не найден.");
         }
 
         log.info("Пользователь найден: {}", user);

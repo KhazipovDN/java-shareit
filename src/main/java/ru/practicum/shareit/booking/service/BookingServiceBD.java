@@ -16,6 +16,7 @@ import ru.practicum.shareit.exception.MissingFieldException;
 import ru.practicum.shareit.exception.ResourceNotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.service.UserService;
 
 import java.time.LocalDateTime;
@@ -52,7 +53,7 @@ public class BookingServiceBD implements BookingService {
     @Override
     @Transactional
     public BookingResponseDto approveByOwner(Long userId, Long bookingId, Boolean approved) {
-        //checkUserExists(userId);
+        userService.getUserById(userId);;
         Booking booking = findBookingById(bookingId);
         if (!Objects.equals(booking.getItem().getOwner().getId(), userId)) {
             throw new ForbiddenOperationException("Пользователь с id " + userId +
@@ -71,7 +72,7 @@ public class BookingServiceBD implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public BookingResponseDto getBookingByIdAndUser(Long bookingId, Long userId) {
-        checkUserExists(userId);
+        userService.getUserById(userId);;
         Booking booking = findBookingById(bookingId);
 
         if (!Objects.equals(booking.getBooker().getId(), userId)
@@ -159,11 +160,5 @@ public class BookingServiceBD implements BookingService {
             throw new ResourceNotFoundException("Бронирования нет с id " + bookingId);
         }
         return booking;
-    }
-
-    private void checkUserExists(Long userId) {
-        if (userService.getUserById(userId) == null) {
-            throw new ForbiddenOperationException("Пользователь с id " + userId + " не найден");
-        }
     }
 }
