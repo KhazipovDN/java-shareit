@@ -156,7 +156,7 @@ public class BookingServiceBD implements BookingService {
         Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         Booking booking = bookingOptional.get();
         if (booking == null) {
-            throw new ResourceNotFoundException("Бронирования нет с id "+ bookingId);
+            throw new ResourceNotFoundException("Бронирования нет с id " + bookingId);
         }
         return booking;
     }
