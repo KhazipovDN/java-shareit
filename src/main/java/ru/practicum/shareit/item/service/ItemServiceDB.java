@@ -28,10 +28,7 @@ import ru.practicum.shareit.user.storage.UserRepository;
 
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -135,14 +132,62 @@ public class ItemServiceDB implements ItemService {
     @Transactional
     public List<ItemDto> getUserItems(Long userId) {
         log.info("Получение всех предметов пользователя с ID {} из базы данных.", userId);
-        List<Item> userItems = itemRepository.findAllByOwnerId(userId);;
+
+        List<Item> userItems = itemRepository.findAllByOwnerId(userId);
         if (userItems.isEmpty()) {
             log.info("В базе данных нет предметов для пользователя с ID {}.", userId);
             return new ArrayList<>();
         }
+
+        List<Long> itemIds = new ArrayList<>();
+        for (Item item : userItems) {
+            itemIds.add(item.getId());
+        }
+
+        List<Booking> approvedBookings = bookingRepository.findApprovedBookingsForItems(itemIds);
+
+        Map<Long, List<Booking>> bookingsByItemId = new HashMap<>();
+        for (Booking booking : approvedBookings) {
+            Long itemId = booking.getItem().getId();
+            if (!bookingsByItemId.containsKey(itemId)) {
+                bookingsByItemId.put(itemId, new ArrayList<>());
+            }
+            bookingsByItemId.get(itemId).add(booking);
+        }
+
+        List<Comment> comments = commentRepository.findCommentsByItemIds(itemIds);
+
+        Map<Long, List<Comment>> commentsByItemId = new HashMap<>();
+        for (Comment comment : comments) {
+            Long itemId = comment.getItem().getId();
+            if (!commentsByItemId.containsKey(itemId)) {
+                commentsByItemId.put(itemId, new ArrayList<>());
+            }
+            commentsByItemId.get(itemId).add(comment);
+        }
+
         List<ItemDto> itemDtos = new ArrayList<>();
         for (Item item : userItems) {
-            itemDtos.add(ItemMapper.toItemDto(item));
+            Long itemId = item.getId();
+
+            List<Booking> itemBookings = bookingsByItemId.get(itemId);
+            if (itemBookings == null) {
+                itemBookings = Collections.emptyList();
+            }
+
+            BookerInfoDto lastBooking = getLastBooking(itemBookings);
+            BookerInfoDto nextBooking = getNextBooking(itemBookings);
+
+            List<Comment> itemComments = commentsByItemId.get(itemId);
+            List<CommentDto> commentDtos = new ArrayList<>();
+            if (itemComments != null) {
+                for (Comment comment : itemComments) {
+                    commentDtos.add(CommentMapper.toCommentDto(comment));
+                }
+            }
+
+            ItemDto itemDto = ItemMapper.toItemDto(item, lastBooking, nextBooking, commentDtos);
+            itemDtos.add(itemDto);
         }
         return itemDtos;
     }
@@ -213,5 +258,29 @@ public class ItemServiceDB implements ItemService {
             return BookingMapper.toBookingInfoDto(nextBooking);
         }
         return null;
+    }
+
+    private BookerInfoDto getLastBooking(List<Booking> bookings) {
+        Booking lastBooking = null;
+        for (Booking booking : bookings) {
+            if (booking.getStart().isBefore(LocalDateTime.now())) {
+                if (lastBooking == null || booking.getStart().isAfter(lastBooking.getStart())) {
+                    lastBooking = booking;
+                }
+            }
+        }
+        return lastBooking != null ? BookingMapper.toBookingInfoDto(lastBooking) : null;
+    }
+
+    private BookerInfoDto getNextBooking(List<Booking> bookings) {
+        Booking nextBooking = null;
+        for (Booking booking : bookings) {
+            if (booking.getStart().isAfter(LocalDateTime.now())) {
+                if (nextBooking == null || booking.getStart().isBefore(nextBooking.getStart())) {
+                    nextBooking = booking;
+                }
+            }
+        }
+        return nextBooking != null ? BookingMapper.toBookingInfoDto(nextBooking) : null;
     }
 }

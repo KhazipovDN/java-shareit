@@ -16,6 +16,7 @@ import ru.practicum.shareit.exception.MissingFieldException;
 import ru.practicum.shareit.exception.ResourceNotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.dto.UserDto;
+import ru.practicum.shareit.user.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.Optional;
 public class BookingServiceBD implements BookingService {
 
     private final BookingRepository bookingRepository;
-    private static final String BOOKING_NOT_FOUND_MESSAGE = "Бронирования с id %s нет";
+    private final UserService userService;
 
     @Override
     @Transactional
@@ -42,7 +43,7 @@ public class BookingServiceBD implements BookingService {
             throw new MissingFieldException("Дата начала не может быть раньше текущей даты");
         }
         if (Objects.equals(itemDto.getOwnerId(), userDto.getId())) {
-            throw new ResourceNotFoundException("Такой вещи нет");
+            throw new ResourceNotFoundException("Нельзя забронировать свою собственную вещь");
         }
         Booking booking = BookingMapper.toBooking(bookingInputDto, BookingStatus.WAITING, itemDto, userDto);
         return BookingMapper.toBookingCreatedDto(bookingRepository.save(booking));
@@ -51,18 +52,15 @@ public class BookingServiceBD implements BookingService {
     @Override
     @Transactional
     public BookingResponseDto approveByOwner(Long userId, Long bookingId, Boolean approved) {
-        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
-        if (bookingOptional.isEmpty()) {
-            throw new ResourceNotFoundException("Бронирование отсутсвует");
-        }
-
-        Booking booking = bookingOptional.get();
+        //checkUserExists(userId);
+        Booking booking = findBookingById(bookingId);
         if (!Objects.equals(booking.getItem().getOwner().getId(), userId)) {
-            throw new ForbiddenOperationException("У пользователя нет такой вещи");
+            throw new ForbiddenOperationException("Пользователь с id " + userId +
+                    " не является владельцем вещи, связанной с бронированием id " + bookingId);
         }
 
         if (booking.getStatus().equals(BookingStatus.APPROVED)) {
-            throw new ResourceNotFoundException("Статус уже поставлен");
+            throw new ResourceNotFoundException("Статус уже поставлен для бронирования с id " + bookingId);
         }
 
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -73,12 +71,8 @@ public class BookingServiceBD implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public BookingResponseDto getBookingByIdAndUser(Long bookingId, Long userId) {
-        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
-        if (bookingOptional.isEmpty()) {
-            throw new ResourceNotFoundException("Бронирование отсутсвует");
-        }
-
-        Booking booking = bookingOptional.get();
+        checkUserExists(userId);
+        Booking booking = findBookingById(bookingId);
 
         if (!Objects.equals(booking.getBooker().getId(), userId)
                 && !Objects.equals(booking.getItem().getOwner().getId(), userId)) {
@@ -154,7 +148,22 @@ public class BookingServiceBD implements BookingService {
                         .toBookingCreatedDto(bookingRepository
                                 .getAllRejectedBookingsByOwnerId(userId));
             default:
-                throw new IncorrectStateException("Unknown state: " + state);
+                throw new IncorrectStateException("Неизвестный статус: " + state);
+        }
+    }
+
+    private Booking findBookingById(Long bookingId) {
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
+        Booking booking = bookingOptional.get();
+        if (booking == null) {
+            throw new ResourceNotFoundException("Бронирования нет с id "+ bookingId);
+        }
+        return booking;
+    }
+
+    private void checkUserExists(Long userId) {
+        if (userService.getUserById(userId) == null) {
+            throw new ForbiddenOperationException("Пользователь с id " + userId + " не найден");
         }
     }
 }
