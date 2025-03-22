@@ -8,9 +8,11 @@ import ru.practicum.shareit.exception.ForbiddenOperationException;
 import ru.practicum.shareit.exception.MissingFieldException;
 import ru.practicum.shareit.exception.ResourceNotFoundException;
 import ru.practicum.shareit.item.ItemMapper;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.storage.ItemStorage;
+import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
 
 import java.util.ArrayList;
@@ -28,7 +30,7 @@ public class ItemServiceImpl implements ItemService {
         log.info("Создание предмета для пользователя с ID {}", userId);
         userService.getUserById(userId);
         validateItemFields(itemDto);
-        Item item = ItemMapper.toItem(itemDto, userId);
+        Item item = ItemMapper.toItem(itemDto, userService.getUserById(userId));
         itemStorage.addItem(item);
         log.info("Предмет с ID {} успешно создан для пользователя {}", item.getId(), userId);
         return ItemMapper.toItemDto(item);
@@ -42,7 +44,7 @@ public class ItemServiceImpl implements ItemService {
             log.info("Предмет с ID {} не найден.", itemId);
             throw new ResourceNotFoundException("Предмет с ID " + itemId + " не найден.");
         }
-        if (!foundItem.getOwner().equals(userId)) {
+        if (!foundItem.getOwner().getId().equals(userId)) {
             log.info("Пользователь с ID {} не является владельцем предмета с ID {}", userId, itemId);
             throw new ForbiddenOperationException("Пользователь с ID " + userId + " не является владельцем предмета.");
         }
@@ -74,13 +76,18 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    public ItemDto getByItemIdAndUserId(Long itemId, Long userId) {
+        return null;
+    }
+
+    @Override
     public List<ItemDto> getUserItems(Long userId) {
         log.info("Получение предметов пользователя с ID {}", userId);
         userService.getUserById(userId);
         List<ItemDto> userItems = new ArrayList<>();
         List<Item> allItems = itemStorage.getAllItems();
         for (Item item : allItems) {
-            if (item.getOwner().equals(userId)) {
+            if (item.getOwner().getId().equals(userId)) {
                 userItems.add(ItemMapper.toItemDto(item));
             }
         }
@@ -107,6 +114,16 @@ public class ItemServiceImpl implements ItemService {
         }
         log.debug("Найдено {} предметов по запросу: {}", searchResults.size(), text);
         return searchResults;
+    }
+
+    @Override
+    public List<CommentDto> getAllCommentsByItemId(Long itemId) {
+        return List.of();
+    }
+
+    @Override
+    public CommentDto createComment(CommentDto commentDto, UserDto userDto, ItemDto itemDto) {
+        return null;
     }
 
     private void validateItemFields(ItemDto itemDto) {
