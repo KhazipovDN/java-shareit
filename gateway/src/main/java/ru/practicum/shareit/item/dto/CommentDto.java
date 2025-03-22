@@ -12,6 +12,7 @@ public class CommentDto {
     @NotBlank(groups = {Create.class})
     String text;
     String authorName;
+
     @DateTimeFormat(pattern = "yyyy-MM-ddTHH:mm:ss")
     LocalDateTime created;
 }

@@ -20,6 +20,7 @@ public class ItemDto {
     String description;
     @NotNull(groups = {Create.class})
     Boolean available;
+
     Long ownerId;
     BookerInfoDto lastBooking;
     BookerInfoDto nextBooking;
