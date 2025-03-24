@@ -18,7 +18,10 @@ import ru.practicum.shareit.user.storage.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,15 +31,18 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
 
-    @Override
-    public ItemRequestResponseDto createRequest(Long userId, ItemRequestDto itemRequestDto) {
-        log.info("Создание запроса для пользователя с ID {}", userId);
-        User requester = userRepository.findById(userId)
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("Пользователь с ID {} не найден", userId);
                     throw new ResourceNotFoundException("User not found");
                 });
+    }
 
+    @Override
+    public ItemRequestResponseDto createRequest(Long userId, ItemRequestDto itemRequestDto) {
+        log.info("Создание запроса для пользователя с ID {}", userId);
+        User requester = getUserOrThrow(userId);
         ItemRequest itemRequest = ItemRequestMapper.toItemRequest(itemRequestDto);
         itemRequest.setRequester(requester);
         itemRequest.setCreated(LocalDateTime.now());
@@ -50,17 +56,23 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public List<ItemRequestResponseDto> getUserRequests(Long userId) {
         log.info("Получение запросов пользователя с ID {}", userId);
-        User requester = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("Пользователь с ID {} не найден", userId);
-                    throw new ResourceNotFoundException("User not found");
-                });
-
+        User requester = getUserOrThrow(userId);
         List<ItemRequest> requests = itemRequestRepository.findByRequesterOrderByCreatedDesc(requester);
         List<ItemRequestResponseDto> responseDtos = new ArrayList<>();
+        List<Long> requestIds = requests.stream()
+                .map(ItemRequest::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<Item>> itemsByRequest = itemRepository.findByRequestIdIn(requestIds)
+                .stream()
+                .collect(Collectors.groupingBy(Item::getRequestId));
 
         for (ItemRequest request : requests) {
-            responseDtos.add(ItemRequestMapper.toItemRequestResponseDto(request));
+            ItemRequestResponseDto dto = ItemRequestMapper.toItemRequestResponseDto(request);
+
+            List<Item> items = itemsByRequest.getOrDefault(request.getId(), Collections.emptyList());
+            dto.setItems(items);
+
+            responseDtos.add(dto);
         }
 
         log.info("Найдено {} запросов для пользователя с ID {}", responseDtos.size(), userId);
@@ -70,20 +82,23 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public List<ItemRequestResponseDto> getAllRequests(Long userId, int from, int size) {
         log.info("Получение всех запросов, начиная с {}, количество {}", from, size);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("Пользователь с ID {} не найден", userId);
-                    throw new ResourceNotFoundException("User not found");
-                });
-
+        User user = getUserOrThrow(userId);
         PageRequest page = PageRequest.of(from / size, size);
         List<ItemRequest> requests = itemRequestRepository.findByRequesterNotOrderByCreatedDesc(user, page);
+        List<Long> requestIds = requests.stream()
+                .map(ItemRequest::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<Item>> itemsByRequest = itemRepository.findByRequestIdIn(requestIds)
+                .stream()
+                .collect(Collectors.groupingBy(Item::getRequestId));
         List<ItemRequestResponseDto> responseDtos = new ArrayList<>();
-
         for (ItemRequest request : requests) {
-            responseDtos.add(ItemRequestMapper.toItemRequestResponseDto(request));
-        }
+            ItemRequestResponseDto dto = ItemRequestMapper.toItemRequestResponseDto(request);
+            List<Item> items = itemsByRequest.getOrDefault(request.getId(), Collections.emptyList());
+            dto.setItems(items);
 
+            responseDtos.add(dto);
+        }
         log.info("Найдено {} запросов", responseDtos.size());
         return responseDtos;
     }
@@ -91,12 +106,7 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     @Override
     public ItemRequestResponseDto getRequestById(Long userId, Long requestId) {
         log.info("Получение запроса с ID {} для пользователя с ID {}", requestId, userId);
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("Пользователь с ID {} не найден", userId);
-                    throw new ResourceNotFoundException("User not found");
-                });
-
+        getUserOrThrow(userId);
         ItemRequest request = itemRequestRepository.findById(requestId)
                 .orElseThrow(() -> {
                     log.error("Запрос с ID {} не найден", requestId);

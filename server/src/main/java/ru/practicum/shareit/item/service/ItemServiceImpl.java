@@ -12,6 +12,7 @@ import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.storage.ItemStorage;
+import ru.practicum.shareit.request.service.ItemRequestService;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
 
@@ -24,6 +25,7 @@ public class ItemServiceImpl implements ItemService {
     private static final Logger log = LoggerFactory.getLogger(ItemServiceImpl.class);
     private final ItemStorage itemStorage;
     private final UserService userService;
+    private final ItemRequestService itemRequestService;
 
 
     @Override
@@ -31,6 +33,14 @@ public class ItemServiceImpl implements ItemService {
         log.info("Создание предмета для пользователя с ID {}", userId);
         userService.getUserById(userId);
         validateItemFields(itemDto);
+
+        if (itemDto.getRequestId() != null) {
+            try {
+                itemRequestService.getRequestById(userId, itemDto.getRequestId());
+            } catch (ResourceNotFoundException e) {
+                throw new ResourceNotFoundException("Запрос с ID " + itemDto.getRequestId() + " не найден");
+            }
+        }
         System.out.println("Номер бронирования - " + itemDto.getRequestId());
         Item item = ItemMapper.toItem(itemDto, userService.getUserById(userId));
         itemStorage.addItem(item);
@@ -101,10 +111,6 @@ public class ItemServiceImpl implements ItemService {
     public List<ItemDto> searchItems(String text) {
         log.info("Поиск предметов с текстом: {}", text);
         List<ItemDto> searchResults = new ArrayList<>();
-        if (text == null || text.isBlank()) {
-            log.debug("Текст для поиска пустой или null.");
-            return searchResults;
-        }
         String searchText = text.toLowerCase();
         List<Item> allItems = itemStorage.getAllItems();
         for (Item item : allItems) {

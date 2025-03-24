@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 
+import java.util.List;
+
 @RestController
 @RequestMapping(path = "/items")
 @RequiredArgsConstructor
@@ -48,6 +50,11 @@ public class ItemController {
     @GetMapping("/search")
     public ResponseEntity<Object> searchItems(@RequestParam String text,
                                               @RequestHeader("X-Sharer-User-Id") long userId) {
+        if (text == null || text.isBlank()) {
+            log.debug("Текст для поиска пустой или null - возвращаем пустой список");
+            return ResponseEntity.ok(List.of());
+        }
+
         log.info("Поиск предметов по тексту: {}, userId={}", text, userId);
         return itemClient.searchItems(text, userId);
     }

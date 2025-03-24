@@ -2,6 +2,7 @@ package ru.practicum.shareit.request.repository;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.model.User;
 
@@ -11,4 +12,5 @@ public interface ItemRequestRepository extends JpaRepository<ItemRequest, Long> 
     List<ItemRequest> findByRequesterOrderByCreatedDesc(User requester);
 
     List<ItemRequest> findByRequesterNotOrderByCreatedDesc(User requester, Pageable pageable);
+
 }

@@ -36,12 +36,6 @@ public class BookingServiceBD implements BookingService {
         if (!itemDto.getAvailable()) {
             throw new MissingFieldException("Вещь недоступна для бронирования");
         }
-        if (bookingInputDto.getEnd().isBefore(bookingInputDto.getStart())) {
-            throw new MissingFieldException("Дата окончания не может быть раньше даты начала");
-        }
-        if (bookingInputDto.getStart().isBefore(LocalDateTime.now())) {
-            throw new MissingFieldException("Дата начала не может быть раньше текущей даты");
-        }
         if (Objects.equals(itemDto.getOwnerId(), userDto.getId())) {
             throw new ResourceNotFoundException("Нельзя забронировать свою собственную вещь");
         }
