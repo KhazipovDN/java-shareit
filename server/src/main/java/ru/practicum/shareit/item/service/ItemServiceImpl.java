@@ -31,7 +31,7 @@ public class ItemServiceImpl implements ItemService {
         log.info("Создание предмета для пользователя с ID {}", userId);
         userService.getUserById(userId);
         validateItemFields(itemDto);
-        System.out.println("Номер бронирования - "+itemDto.getRequestId());
+        System.out.println("Номер бронирования - " + itemDto.getRequestId());
         Item item = ItemMapper.toItem(itemDto, userService.getUserById(userId));
         itemStorage.addItem(item);
         log.info("Предмет с ID {} успешно создан для пользователя {}", item.getId(), userId);
