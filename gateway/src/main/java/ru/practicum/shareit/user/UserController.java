@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.Update;
 import ru.practicum.shareit.user.dto.UserDto;
 
 import jakarta.validation.Valid;
@@ -24,8 +25,8 @@ public class UserController {
     }
 
     @PatchMapping("/{userId}")
-    public ResponseEntity<Object> updateUser(@PathVariable long userId,
-                                             @Valid @RequestBody UserDto userDto) {
+    public ResponseEntity<Object> updateUser( @PathVariable long userId,
+            @RequestBody @Validated(Update.class) UserDto userDto) {
         log.info("Обновление пользователя с ID={}", userId);
         return userClient.updateUser(userId, userDto);
     }

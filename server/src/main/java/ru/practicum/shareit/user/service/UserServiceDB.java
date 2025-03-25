@@ -40,28 +40,25 @@ public class UserServiceDB implements UserService {
     @Transactional
     public UserDto updateUser(Long userId, UserDto userDto) {
         log.info("Обновление пользователя с ID: {}", userId);
-        validateUser(userDto);
-        Optional<User> existingUserOptional = userRepository.findById(userId);
-        if (existingUserOptional.isEmpty()) {
-            throw new ResourceNotFoundException("Пользователь с ID " + userId + " не найден.");
-        }
-        if (userDto.getEmail() != null) {
-            boolean emailExists = userRepository.existsByEmailAndIdNot(userDto.getEmail(), userId);
-            if (emailExists) {
+
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с ID " + userId + " не найден."));
+
+        if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
+            if (!userDto.getEmail().equals(existingUser.getEmail()) &&
+                    userRepository.existsByEmailAndIdNot(userDto.getEmail(), userId)) {
                 throw new SameEmailException("Email " + userDto.getEmail() + " уже используется другим пользователем.");
             }
-        }
-        User existingUser = existingUserOptional.get();
-        User updatedUser = userRepository.save(existingUser);
-        if (userDto.getEmail() != null) {
             existingUser.setEmail(userDto.getEmail());
         }
-        if (userDto.getName() != null) {
+        if (userDto.getName() != null && !userDto.getName().isBlank()) {
             existingUser.setName(userDto.getName());
         }
+        User updatedUser = userRepository.save(existingUser);
         log.info("Пользователь обновлен: {}", updatedUser.getId());
         return UserMapper.toUserDto(updatedUser);
     }
+
 
     @Override
     @Transactional
