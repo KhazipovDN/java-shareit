@@ -1,10 +1,8 @@
 package ru.practicum.shareit.user.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.groups.Default;
 import lombok.*;
-import ru.practicum.shareit.Update;
+import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
@@ -13,11 +11,8 @@ import ru.practicum.shareit.Update;
 @Builder
 public class UserDto {
     private Long id;
-
-    @NotBlank(groups = {Default.class, Update.class})
     private String name;
-    @NotBlank(groups = Default.class)
-    @Email(groups = {Default.class, Update.class})
+    @Email(message = "Некорректный формат email")
+    @NotNull(message = "Еmail не должен быть пустым")
     private String email;
-
 }
